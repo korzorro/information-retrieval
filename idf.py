@@ -27,11 +27,11 @@ def doc_contains_term(term, doc):
                 return True
 
 
-def test():
+def search():
     docs = map(open, glob('test-docs/*'))
     term = raw_input('Enter a search term: ')
     print(idf(term, docs))
 
 
 if __name__ == '__main__':
-    test()
+    search()

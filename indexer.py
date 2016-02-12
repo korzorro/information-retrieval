@@ -1,44 +1,107 @@
 import re
 from glob import glob
+from copy import deepcopy
 
-
+DOC_DIR = 'test_docs'
 NOT_WORD_RE = '[^\w]'
+ops = {'and': set.intersection,
+       'or': set.union,
+       'not': set.difference}
 
 
-def index(docs):
-    docs = zip(map(wordify, docs), range(len(docs)))
-    dictionary = dict()
-    for doc, doc_id in docs:
-        for word in doc:
-            if word in dictionary:
-                dictionary[word].add(doc_id)
-            else:
-                dictionary[word] = {doc_id}
-    return dictionary
+def run():
+    docs = collect_documents_as_strings()
+    postings_list = make_postsings_list(docs)
+    query = get_query('Enter a search query (Enter to quit): ')
+    while len(query[0]) > 0:
+        retrieved = binary_retrieve(postings_list, deepcopy(query), len(docs))
+        test_results(retrieved, query)
+        print('Found documents: %d' % len(retrieved))
+        query = get_query('Enter a search query (Enter to quit): ')
+        
 
 
-def wordify(doc):
-    doc = doc.read().replace('\n', '').lower()
+def collect_documents_as_strings():
+    docs = []
+    for filename in glob(DOC_DIR + '/*'):
+        with open(filename) as readfile:
+            docs.append((filename, tokenize(readfile.read())))
+    return docs
+
+
+def tokenize(doc):
+    doc = doc.replace('\n', '').lower()
     return re.sub(NOT_WORD_RE, ' ', doc).split()
 
 
-def lookup(query, dictionary):
-    pages_found = None
-    for term in query:
-        if dictionary.get(term):
-            if pages_found:
-                pages_found &= dictionary.get(term)
+def make_postsings_list(docs):
+    postings_list= dict()
+    for doc_id, doc in docs:
+        for token in doc:
+            if token in postings_list:
+                postings_list[token].add(doc_id)
             else:
-                pages_found = dictionary.get(term)
-    return pages_found
+                postings_list[token] = {doc_id}
+    return postings_list
 
 
-def test():
-    docs = map(open, glob('test_docs/*'))
-    dictionary = index(docs)
-    query = raw_input('Enter a search term: ').lower().split(' ')
-    print(lookup(query, dictionary))
+def get_query(prompt):
+    return parse_query(raw_input(prompt))
+
+    
+def parse_query(query):
+    return infix_postfix(query.lower().split(' '))
+
+    
+def infix_postfix(tokens):
+    output = []
+    stack = []
+    for item in tokens:
+        if item in ops:
+            while stack:
+                output.append(stack.pop())
+            stack.append(item)
+        else:
+            output.append(item)
+    while stack:
+        output.append(stack.pop())
+    return output
+
+
+def binary_retrieve(postings_list, query, num_docs):
+    all_docs = range(num_docs)
+    pages_found = set()
+    def _binary_retrieve(query):
+        op = query.pop()
+        if op == 'not':
+            return ops[op](all_docs,  _binary_retrieve(query))
+        elif op == 'and' or op == 'or':
+            op1 = _binary_retrieve(query)
+            op2 = _binary_retrieve(query)
+            return ops[op](op1, op2)
+        else:
+            found = postings_list.get(op)
+            if found:
+                return found
+            else:
+                return set()
+            
+    return _binary_retrieve(query)
+
+
+# For now only tests 'AND' cases
+def test_results(retrieved, query):
+    for filename in retrieved:
+        with open(filename) as foundfile:
+            text = foundfile.read().lower()
+            for term in query:
+                if term not in ops:
+                    if not (term in text):
+                        print('Test failed')
+                        print('Filename: %s' % filename)
+                        print('Term: %s' % term)
+                        exit()
 
     
 if __name__ == '__main__':
-    test()
+    run()
