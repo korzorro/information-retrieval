@@ -11,7 +11,7 @@ ops = {'and': set.intersection,
 
 def run():
     docs = collect_documents_as_strings()
-    postings_list = make_postsings_list(docs)
+    postings_list = make_postings_list(docs)
     query = get_query('Enter a search query (Enter to quit): ')
     while len(query[0]) > 0:
         retrieved = binary_retrieve(postings_list, deepcopy(query), len(docs))
@@ -34,7 +34,7 @@ def tokenize(doc):
     return re.sub(NOT_WORD_RE, ' ', doc).split()
 
 
-def make_postsings_list(docs):
+def make_postings_list(docs):
     postings_list= dict()
     for doc_id, doc in docs:
         for token in doc:
