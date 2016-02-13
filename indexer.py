@@ -15,7 +15,7 @@ def run():
     query = get_query('Enter a search query (Enter to quit): ')
     while len(query[0]) > 0:
         retrieved = binary_retrieve(postings_list, deepcopy(query), len(docs))
-        test_results(retrieved, query)
+        #test_results(retrieved, query)
         print('Found documents: %d' % len(retrieved))
         query = get_query('Enter a search query (Enter to quit): ')
         
@@ -69,12 +69,14 @@ def infix_postfix(tokens):
 
 
 def binary_retrieve(postings_list, query, num_docs):
-    all_docs = range(num_docs)
+    all_docs = set()
+    for term in postings_list:
+        all_docs |= postings_list[term]
     pages_found = set()
     def _binary_retrieve(query):
         op = query.pop()
         if op == 'not':
-            return ops[op](all_docs,  _binary_retrieve(query))
+            return all_docs -  _binary_retrieve(query)
         elif op == 'and' or op == 'or':
             op1 = _binary_retrieve(query)
             op2 = _binary_retrieve(query)
