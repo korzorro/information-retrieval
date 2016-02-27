@@ -10,10 +10,15 @@ ops = {'and': set.intersection,
 
 
 def run():
-    docs = collect_documents_as_strings()
+    print('Reading docs...')
+    docs = load_docs(DOC_DIR)
+    print('Done.')
+    print('Generating postings list...')
     postings_list = make_postings_list(docs)
+    print('Done.')
     query = get_query('Enter a search query (Enter to quit): ')
     while len(query[0]) > 0:
+        print('Processing query...')
         retrieved = binary_retrieve(postings_list, deepcopy(query), len(docs))
         #test_results(retrieved, query)
         print('Found documents: %d' % len(retrieved))
@@ -21,9 +26,9 @@ def run():
         
 
 
-def collect_documents_as_strings():
+def load_docs(directory):
     docs = []
-    for filename in glob(DOC_DIR + '/*'):
+    for filename in glob(directory + '/*'):
         with open(filename) as readfile:
             docs.append((filename, tokenize(readfile.read())))
     return docs
@@ -42,6 +47,21 @@ def make_postings_list(docs):
                 postings_list[token].add(doc_id)
             else:
                 postings_list[token] = {doc_id}
+    return postings_list
+
+
+def make_postings_list2(docs):
+    postings_list= dict()
+    for doc_id, doc in docs:
+        for pos, token in enumerate(doc):
+            if token in postings_list:
+                postings_list[token][0] += 1
+                if doc_id in postings_list[token][1]:
+                    postings_list[token][1][doc_id].add(pos)
+                else:
+                    postings_list[token][1][doc_id] = {pos}
+            else:
+                postings_list[token] = [1, {doc_id: {pos}}]
     return postings_list
 
 
