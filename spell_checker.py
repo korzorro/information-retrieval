@@ -68,6 +68,7 @@ if __name__ == '__main__':
     while len(word) > 0:
         vocabulary = filter(lambda x: kgram_jaccard(word, x) > jaccard_threshold, 
                             lookup_kword_index(word, kword_index, K))
+        # vocabulary = all_words
         nearest_word, edit_distance = find_nearest_word(word, vocabulary)
         if edit_distance == 0:
             print('*%s* was found in the dictionary.' % nearest_word)
